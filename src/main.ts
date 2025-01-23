@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
+  app.setGlobalPrefix('api');
   // Get the port from the environment using ConfigService
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT') || 3000;
@@ -15,7 +15,6 @@ async function bootstrap() {
     .setDescription('API for managing the HR module in an ERP system')
     .setVersion('1.0.0')
     .addServer(`http://localhost:${port}/`, 'Local environment')
-    // .addTag('')
     .build();
 
   const document = SwaggerModule.createDocument(app, options);

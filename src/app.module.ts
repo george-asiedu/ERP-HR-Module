@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { pgConfig } from '../dbConfig';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -13,8 +14,9 @@ import { pgConfig } from '../dbConfig';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => pgConfig(configService),
+      useFactory: (configService: ConfigService) => pgConfig(configService)
     }),
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

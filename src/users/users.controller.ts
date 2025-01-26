@@ -23,20 +23,14 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'List of all users in the system.',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'number', example: 1 },
-          name: { type: 'string', example: 'George Asiedu' },
-          email: { type: 'string', example: 'george.asiedu@gmail.com' },
-          role: { type: 'string', example: 'admin' },
-        },
-      },
-    },
+    example: {
+      id: 1,
+      name: 'George Asiedu',
+      email: 'george.asiedu@gmail.com',
+      role: 'admin'
+    }
   })
-  async findAll(): Promise<User[]> {
+  async findAll(): Promise<{data: User[]}> {
     return await this.usersService.findAll();
   }
 

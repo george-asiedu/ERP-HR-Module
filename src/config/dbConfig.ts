@@ -1,6 +1,5 @@
 import { PostgresConnectionOptions} from 'typeorm/driver/postgres/PostgresConnectionOptions';
 import { ConfigService } from '@nestjs/config';
-import { User } from '../users/users.entity';
 
 export const pgConfig = (configService: ConfigService): PostgresConnectionOptions => ({
   type: 'postgres',
@@ -10,7 +9,10 @@ export const pgConfig = (configService: ConfigService): PostgresConnectionOption
   password: configService.get<string>('DB_PASSWORD', 'default_password'),
   database: configService.get<string>('DB_NAME', 'default_db'),
   url: configService.get<string>('DB_URL'),
-  entities: [User],
+  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+  extra: {
+    charset: 'utf8mb4_unicode_ci'
+  },
   synchronize: configService.get<string>('NODE_ENV') !== 'production'
     ? configService.get<boolean>('DB_SYNC', true)
     : false,

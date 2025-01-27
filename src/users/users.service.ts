@@ -12,18 +12,18 @@ export class UsersService {
     private readonly usersRepository: Repository<User>,
   ) {}
 
-  async findAll(): Promise<{data: User[]}> {
+  async getAllUsers(): Promise<{data: User[]}> {
     const res = await this.usersRepository.find();
     return {
       data: res
     }
   }
 
-  async findOne(id: number): Promise<User | null> {
+  async getUserById(id: number): Promise<User | null> {
     return await this.usersRepository.findOneBy({ id });
   }
 
-  async create(user: CreateUserDto): Promise<CreateUserDto & User> {
+  async signup(user: CreateUserDto): Promise<CreateUserDto & User> {
     const newUser: CreateUserDto & User = this.usersRepository.create(user);
     newUser.password = await bcrypt.hash(user.password, await bcrypt.genSalt());
     const existingUser = await this.usersRepository.findOneBy({ email: user.email });
@@ -41,7 +41,7 @@ export class UsersService {
 
   }
 
-  async remove(id: number): Promise<void> {
+  async deleteUser(id: number): Promise<void> {
     await this.usersRepository.delete(id);
   }
 }

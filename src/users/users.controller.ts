@@ -1,17 +1,9 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param, ParseIntPipe,
-  Post,
-  UsePipes,
-  ValidationPipe,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, UsePipes, ValidationPipe } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from './users.entity';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { CreateUserDto } from './createUser.dto';
+import { CreateUserDto, UserRole } from './createUser.dto';
+import { Roles } from '../guards/roles/role.decorator';
 
 @ApiTags('Users')
 @Controller('users')
@@ -19,6 +11,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('all-users')
+  @Roles(UserRole.Admin)
   @ApiOperation({ summary: 'Displays all users in the system.' })
   @ApiResponse({
     status: 200,
@@ -35,6 +28,7 @@ export class UsersController {
   }
 
   @Post('signup')
+  @Roles(UserRole.Admin, UserRole.Employee)
   @UsePipes(
     new ValidationPipe({
       whitelist: true,
@@ -85,6 +79,7 @@ export class UsersController {
   }
 
   @Get(':id')
+  @Roles(UserRole.Admin)
   @ApiOperation({ summary: 'Retrieves a user by ID.' })
   @ApiResponse({
     status: 200,
@@ -116,6 +111,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.Admin)
   @ApiOperation({ summary: 'Deletes a user by ID.' })
   @ApiResponse({
     status: 200,

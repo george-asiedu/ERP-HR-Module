@@ -6,4 +6,6 @@ export const constants = {
   productionUrl: 'https://erp-system-hr-module.onrender.com',
   localUrl: 'http://localhost:',
   globalPrefix: 'api',
+  ROLES_KEY: 'roles',
+  UnauthorizedError: 'Unauthorized user access',
 }

@@ -12,11 +12,8 @@ export class UsersService {
     private readonly usersRepository: Repository<User>,
   ) {}
 
-  async getAllUsers(): Promise<{data: User[]}> {
-    const res = await this.usersRepository.find();
-    return {
-      data: res
-    }
+  async getAllUsers(): Promise<User[]> {
+    return await this.usersRepository.find();
   }
 
   async getUserById(id: number): Promise<User | null> {

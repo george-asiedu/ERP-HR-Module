@@ -4,11 +4,13 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { constants } from './utils/constants';
+import { TimeoutInterceptor } from './interceptors/timeout.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix(constants.globalPrefix);
   app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalInterceptors(new TimeoutInterceptor());
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT') || 3000;

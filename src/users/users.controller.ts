@@ -3,7 +3,7 @@ import {
   Controller,
   Delete,
   Get,
-  Param,
+  Param, ParseIntPipe,
   Post,
   UsePipes,
   ValidationPipe,
@@ -30,18 +30,18 @@ export class UsersController {
       role: 'admin'
     }
   })
-  async findAll(): Promise<{data: User[]}> {
-    return await this.usersService.findAll();
+  async getAllUsers(): Promise<{data: User[]}> {
+    return await this.usersService.getAllUsers();
   }
 
-  @Post('create-user')
+  @Post('signup')
   @UsePipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
     }),
   )
-  @ApiOperation({ summary: 'Creates a new user in the system.' })
+  @ApiOperation({ summary: 'Creates a new user into the system.' })
   @ApiResponse({
     status: 201,
     description: 'User has been successfully created.',
@@ -80,8 +80,8 @@ export class UsersController {
     type: CreateUserDto,
     description: 'JSON structure to create a new user.',
   })
-  async create(@Body() user: CreateUserDto): Promise<CreateUserDto & User> {
-    return await this.usersService.create(user);
+  async signup(@Body() user: CreateUserDto): Promise<CreateUserDto & User> {
+    return await this.usersService.signup(user);
   }
 
   @Get(':id')
@@ -111,8 +111,8 @@ export class UsersController {
       },
     },
   })
-  async findOne(@Param('id') id: number): Promise<User | null> {
-    return await this.usersService.findOne(id);
+  async getUserById(@Param('id', ParseIntPipe) id: number): Promise<User | null> {
+    return await this.usersService.getUserById(id);
   }
 
   @Delete(':id')
@@ -139,7 +139,7 @@ export class UsersController {
       },
     },
   })
-  async remove(@Param('id') id: number): Promise<any> {
-    return this.usersService.remove(id);
+  async deleteUser(@Param('id') id: number): Promise<any> {
+    return this.usersService.deleteUser(id);
   }
 }

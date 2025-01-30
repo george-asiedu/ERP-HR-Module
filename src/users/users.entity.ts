@@ -34,6 +34,12 @@ export class User {
   @Column({ nullable: true })
   public refreshToken!: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  twoFactorCode!: string | null;
+
+  @Column({ default: false })
+  isVerified!: boolean;
+
   @BeforeInsert()
   @BeforeUpdate()
   async handlePasswordHashing(): Promise<void> {

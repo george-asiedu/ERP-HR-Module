@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './users.entity';
 import { QueryFailedError, Repository } from 'typeorm';
 import { CreateUserDto } from './createUser.dto';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -21,12 +20,13 @@ export class UsersService {
   }
 
   async signup(user: CreateUserDto): Promise<CreateUserDto & User> {
-    const newUser: CreateUserDto & User = this.usersRepository.create(user);
-    newUser.password = await bcrypt.hash(user.password, await bcrypt.genSalt());
-    const existingUser = await this.usersRepository.findOneBy({ email: user.email });
+    const existingUser = await this.usersRepository.findOneBy({ email: user.email.toLowerCase() });
     if (existingUser) {
       throw new ConflictException('Email is already in use');
     }
+
+    const newUser = this.usersRepository.create(user);
+
     try {
       return await this.usersRepository.save(newUser);
     } catch (error) {
@@ -35,7 +35,6 @@ export class UsersService {
       }
       throw error;
     }
-
   }
 
   async deleteUser(id: number): Promise<void> {

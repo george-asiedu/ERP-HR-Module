@@ -25,8 +25,10 @@ export class AuthenticationService {
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
     const jwtExpiry = this.configService.get<string>('JWT_EXPIRY');
     const jwtRefreshExpiry = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN');
+    const longExpiry = this.configService.get<string>('JWT_REMEMBER_ME_EXPIRY');
+    const jwtRefreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
 
-    const { email, password } = signInDto;
+    const { email, password, rememberMe } = signInDto;
 
     const user = await this.usersRepository.findOne({
       where: { email: email.toLowerCase() },
@@ -42,13 +44,15 @@ export class AuthenticationService {
       throw new BadRequestException('Invalid email or password');
     }
 
+    const expiration = rememberMe ? longExpiry : jwtExpiry ;
+
     const payload = { email: user.email, sub: user.id };
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: jwtExpiry,
+      expiresIn: expiration,
       secret: jwtSecret,
     });
     const refreshToken = this.jwtService.sign(payload, {
-      secret: jwtSecret,
+      secret: jwtRefreshSecret,
       expiresIn: jwtRefreshExpiry,
     });
 

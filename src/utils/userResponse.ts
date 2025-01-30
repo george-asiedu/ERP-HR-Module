@@ -38,3 +38,13 @@ export const LoginBadRequestExample = [
   'email must be an email',
   'password must be at least 8 characters long'
 ]
+
+export const RegularLoginExample = {
+  summary: 'Regular Login',
+  value: { email: 'george.asiedu@gmail.com', password: 'password123', rememberMe: false },
+}
+
+export const RememberMeLoginExample = {
+  summary: 'Login with Remember Me',
+  value: { email: 'george.asiedu@gmail.com', password: 'password123', rememberMe: true },
+}

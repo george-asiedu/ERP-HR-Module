@@ -1,27 +1,30 @@
 import {
-  Body,
   Controller,
   Delete,
   Get,
   Param,
   ParseIntPipe,
-  Post,
-  UseInterceptors,
-  UsePipes,
-  ValidationPipe,
+  Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from './users.entity';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { CreateUserDto, UserRole } from './createUser.dto';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserRole } from './createUser.dto';
 import { Roles } from '../guards/roles/role.decorator';
-import { TransformInterceptor } from '../interceptors/transform.interceptor';
+import { RequestInterface } from '../guards/auth/auth.guard';
+import {
+  GetAllUsersResponseExample,
+  UserResponseExample
+} from '../utils/userResponse';
+import { BaseController } from '../utils/baseController';
 
 @ApiTags('Users')
+@ApiBearerAuth()
 @Controller('users')
-@UseInterceptors(TransformInterceptor)
-export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+export class UsersController extends BaseController {
+  constructor(private usersService: UsersService) {
+    super();
+  }
 
   @Get('all-users')
   @Roles(UserRole.Admin)
@@ -29,51 +32,10 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'Success',
-    example: {
-      id: 1,
-      name: 'George Asiedu',
-      email: 'george.asiedu@gmail.com',
-      role: 'admin'
-    }
+    example: GetAllUsersResponseExample
   })
   async getAllUsers(): Promise<User[]> {
     return await this.usersService.getAllUsers();
-  }
-
-  @Post('signup')
-  @Roles(UserRole.Admin, UserRole.Employee)
-  @UsePipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-    }),
-  )
-  @ApiOperation({ summary: 'Creates a new user into the system.' })
-  @ApiResponse({
-    status: 201,
-    description: 'Success',
-    example: {
-      id: 1,
-      name: 'George Asiedu',
-      email: 'george.asiedu@gmail.com',
-      role: 'admin'
-    }
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad Request.',
-    example: [
-      'name should not be empty',
-      'email must be an email',
-      'password must be at least 8 characters long'
-    ],
-  })
-  @ApiBody({
-    type: CreateUserDto,
-    description: 'JSON structure to create a new user.',
-  })
-  async signup(@Body() user: CreateUserDto): Promise<CreateUserDto & User> {
-    return await this.usersService.signup(user);
   }
 
   @Get(':id')
@@ -82,12 +44,7 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'Success',
-    example: {
-      id: 1,
-      name: 'George Asiedu',
-      email: 'george.asiedu@gmail.com',
-      role: 'admin'
-    }
+    example: UserResponseExample
   })
   @ApiResponse({
     status: 400,
@@ -98,18 +55,22 @@ export class UsersController {
     return await this.usersService.getUserById(id);
   }
 
-  @Delete(':id')
-  @Roles(UserRole.Admin)
-  @ApiOperation({ summary: 'Deletes a user by ID.' })
+  @Get('profile')
+  @ApiOperation({ summary: 'Retrieves the profile of the logged-in user.' })
   @ApiResponse({
     status: 200,
-    description: 'Success'
+    description: 'Success',
+    example: UserResponseExample
   })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad Request.',
-    example: 'Invalid user ID format.'
-  })
+  async getProfile(@Req() req: RequestInterface): Promise<User | null> {
+    return await this.usersService.getUserById(req.user?.id);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.Admin)
+  @ApiOperation({ summary: 'Deletes a user by ID' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiResponse({ status: 400, description: 'Bad Request', example: 'Invalid user ID format.' })
   async deleteUser(@Param('id') id: number): Promise<any> {
     return this.usersService.deleteUser(id);
   }

@@ -1,11 +1,13 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { SignInDto } from './dto/signIn.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../users/users.entity';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { MailerService } from '@nestjs-modules/mailer';
+import { CreateUserDto } from '../users/createUser.dto';
 
 export interface SignInResponse {
   accessToken: string;
@@ -16,10 +18,53 @@ export interface SignInResponse {
 export class AuthenticationService {
   constructor(
     @InjectRepository(User)
-    private readonly usersRepository: Repository<User>,
-    private readonly jwtService: JwtService,
+    private usersRepository: Repository<User>,
+    private jwtService: JwtService,
     private configService: ConfigService,
+    private mailerService: MailerService,
   ) {}
+
+  async signup(user: CreateUserDto): Promise<CreateUserDto & User> {
+    const existingUser = await this.usersRepository.findOneBy({ email: user.email.toLowerCase() });
+    if (existingUser) {
+      throw new ConflictException('Email is already in use');
+    }
+
+    const twoFactorCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const newUser = this.usersRepository.create({ ...user, twoFactorCode });
+
+    try {
+      await this.usersRepository.save(newUser);
+      await this.mailerService.sendMail({
+        to: newUser.email,
+        subject: 'Your 2FA Verification Code',
+        text: `Your 2FA code is: ${twoFactorCode}`,
+      });
+      return newUser;
+    } catch (error) {
+      if (error instanceof QueryFailedError && error.driverError.code === '23505') {
+        throw new ConflictException('Email is already in use');
+      }
+      throw error;
+    }
+  }
+
+  async verifyTwoFactorCode(email: string, code: string): Promise<void> {
+    const user = await this.usersRepository.findOne({ where: { email } });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (user.twoFactorCode !== code) {
+      throw new BadRequestException('Invalid 2FA code');
+    }
+
+    user.isVerified = true;
+    user.twoFactorCode = null;
+    await this.usersRepository.save(user);
+  }
 
   async signIn(signInDto: SignInDto): Promise<SignInResponse> {
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
@@ -32,11 +77,15 @@ export class AuthenticationService {
 
     const user = await this.usersRepository.findOne({
       where: { email: email.toLowerCase() },
-      select: ['id', 'email', 'password']
+      select: ['id', 'email', 'password', 'isVerified']
     });
 
     if (!user) {
       throw new BadRequestException('Invalid email or password');
+    }
+
+    if (!user.isVerified) {
+      throw new BadRequestException('Account not verified. Please verify your email.');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);

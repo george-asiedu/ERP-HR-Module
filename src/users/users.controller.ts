@@ -5,17 +5,18 @@ import {
   Get,
   Param,
   ParseIntPipe,
-  Post,
+  Post, UseGuards,
   UseInterceptors,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from './users.entity';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateUserDto, UserRole } from './createUser.dto';
 import { Roles } from '../guards/roles/role.decorator';
 import { TransformInterceptor } from '../interceptors/transform.interceptor';
+import { AuthGuard } from '../guards/auth/auth.guard';
 
 @ApiTags('Users')
 @Controller('users')
@@ -23,6 +24,8 @@ import { TransformInterceptor } from '../interceptors/transform.interceptor';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @Get('all-users')
   @Roles(UserRole.Admin)
   @ApiOperation({ summary: 'Displays all users in the system.' })
@@ -76,6 +79,8 @@ export class UsersController {
     return await this.usersService.signup(user);
   }
 
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @Get(':id')
   @Roles(UserRole.Admin)
   @ApiOperation({ summary: 'Retrieves a user by ID.' })
@@ -98,6 +103,8 @@ export class UsersController {
     return await this.usersService.getUserById(id);
   }
 
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @Delete(':id')
   @Roles(UserRole.Admin)
   @ApiOperation({ summary: 'Deletes a user by ID.' })

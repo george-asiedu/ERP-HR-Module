@@ -22,7 +22,7 @@ import { AuthGuard } from '../guards/auth/auth.guard';
 import {
   BadRequestExample,
   LoginBadRequestExample,
-  LoginResponseExample,
+  LoginResponseExample, RegularLoginExample, RememberMeLoginExample,
   UserResponseExample,
 } from '../utils/userResponse';
 import { UsersService } from 'src/users/users.service';
@@ -60,7 +60,11 @@ export class AuthenticationController {
   @Post('signin')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, }),)
   @ApiOperation({ summary: 'Sign in a user into the system.' })
-  @ApiBody({ type: SignInDto, description: 'JSON structure to login a user', })
+  @ApiBody({
+    type: SignInDto,
+    description: 'JSON structure to login a user.',
+    examples: {regularLogin: RegularLoginExample, rememberMeLogin: RememberMeLoginExample},
+  })
   @ApiResponse({
     status: 201,
     description: 'Success',
@@ -127,10 +131,7 @@ export class AuthenticationController {
 
       user.refreshToken = newRefreshToken;
       await this.usersRepository.save(user);
-      return {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken
-      }
+      return { accessToken: newAccessToken, refreshToken: newRefreshToken }
     } catch (error) {
       if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
         throw new BadRequestException('Invalid or expired refresh token');

@@ -36,11 +36,17 @@ export class AuthenticationService {
 
     try {
       await this.usersRepository.save(newUser);
-      await this.mailerService.sendMail({
-        to: newUser.email,
-        subject: 'Your 2FA Verification Code',
-        text: `Your 2FA code is: ${twoFactorCode}`,
-      });
+
+      try {
+        await this.mailerService.sendMail({
+          to: newUser.email,
+          subject: 'Your 2FA Verification Code',
+          text: `Your 2FA code is: ${twoFactorCode}`,
+        });
+      } catch (emailError) {
+        throw new BadRequestException(`Error sending email: ${emailError.message}`);
+      }
+
       return newUser;
     } catch (error) {
       if (error instanceof QueryFailedError && error.driverError.code === '23505') {

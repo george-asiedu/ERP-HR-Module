@@ -17,85 +17,79 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { TransformInterceptor } from '../interceptors/transform.interceptor';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { UserRole } from '../users/createUser.dto';
-import { Roles } from '../guards/roles/role.decorator';
+import { CreateUserDto } from '../users/createUser.dto';
 import { AuthGuard } from '../guards/auth/auth.guard';
+import {
+  BadRequestExample,
+  LoginBadRequestExample,
+  LoginResponseExample,
+  UserResponseExample,
+} from '../utils/userResponse';
+import { UsersService } from 'src/users/users.service';
 
 @ApiTags('Authentication')
 @Controller('auth')
-@Roles(UserRole.Employee, UserRole.Admin)
 @UseInterceptors(TransformInterceptor)
 export class AuthenticationController {
   constructor(
-    private readonly authenticationService: AuthenticationService,
-    @InjectRepository(User) private readonly usersRepository: Repository<User>,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService
+    private authenticationService: AuthenticationService,
+    @InjectRepository(User) private usersRepository: Repository<User>,
+    private jwtService: JwtService,
+    private configService: ConfigService,
+    private usersService: UsersService
   ) {}
 
-  @Post('signin')
-  @UsePipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-    }),
-  )
-  @ApiOperation({ summary: 'Sign in a user into the system.' })
+  @Post('signup')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  @ApiOperation({ summary: 'Creates a new user into the system.' })
+  @ApiBody({ type: CreateUserDto, description: 'JSON structure to create a new user.' })
   @ApiResponse({
     status: 201,
     description: 'Success',
-    example: {
-      message: 'Success',
-      data: {
-        email: 'george.asiedu@gmail.com',
-        accessToken: '12345',
-        refreshToken: '12345',
-      }
-    }
+    example: UserResponseExample,
   })
   @ApiResponse({
     status: 400,
     description: 'Bad Request.',
-    example: [
-      'email must be an email',
-      'password must be at least 8 characters long'
-    ],
+    example: BadRequestExample,
   })
-  @ApiBody({
-    type: SignInDto,
-    description: 'JSON structure to login a user',
+  async signup(@Body() user: CreateUserDto): Promise<CreateUserDto & User> {
+    return await this.usersService.signup(user);
+  }
+
+  @Post('signin')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, }),)
+  @ApiOperation({ summary: 'Sign in a user into the system.' })
+  @ApiBody({ type: SignInDto, description: 'JSON structure to login a user', })
+  @ApiResponse({
+    status: 201,
+    description: 'Success',
+    example: LoginResponseExample
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request',
+    example: LoginBadRequestExample
   })
   async signIn(@Body() signInDto: SignInDto) {
     return this.authenticationService.signIn(signInDto);
   }
 
-  @UseGuards(AuthGuard)
   @ApiBearerAuth()
+  @UseGuards(AuthGuard)
   @Post('refresh-token')
-  @UsePipes(
-    new ValidationPipe({ forbidNonWhitelisted: true, }),
-  )
+  @UsePipes(new ValidationPipe({ forbidNonWhitelisted: true, }))
   @ApiOperation({ summary: 'Allow continuous user access in the system.' })
+  @ApiBody({ description: 'Refresh token string' })
   @ApiResponse({
     status: 201,
     description: 'Success',
-    example: {
-      message: 'Success',
-      data: {
-        name: 'George Asiedu',
-        email: 'george.asiedu@gmail.com',
-        accessToken: '12345',
-        refreshToken: '12345',
-      }
-    }
+    example: LoginResponseExample
   })
   @ApiResponse({
     status: 400,
     description: 'Bad Request.',
     example: ['invalid token'],
-  })
-  @ApiBody({
-    description: 'Refresh token string',
   })
   async refreshToken(@Body('refreshToken') refreshToken: string) {
     try {

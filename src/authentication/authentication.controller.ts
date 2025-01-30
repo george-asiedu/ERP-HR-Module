@@ -25,7 +25,6 @@ import {
   LoginResponseExample, RegularLoginExample, RememberMeLoginExample,
   UserResponseExample,
 } from '../utils/userResponse';
-import { UsersService } from 'src/users/users.service';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -35,8 +34,7 @@ export class AuthenticationController {
     private authenticationService: AuthenticationService,
     @InjectRepository(User) private usersRepository: Repository<User>,
     private jwtService: JwtService,
-    private configService: ConfigService,
-    private usersService: UsersService
+    private configService: ConfigService
   ) {}
 
   @Post('signup')
@@ -54,7 +52,24 @@ export class AuthenticationController {
     example: BadRequestExample,
   })
   async signup(@Body() user: CreateUserDto): Promise<CreateUserDto & User> {
-    return await this.usersService.signup(user);
+    return await this.authenticationService.signup(user);
+  }
+
+  @Post('verify-2fa')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  @ApiOperation({ summary: 'Verifies the 2FA code sent to the user\'s email.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid 2FA code or user not found.',
+  })
+  async verifyTwoFactorCode(@Body() body: { email: string; code: string }) {
+    const { email, code } = body;
+    await this.authenticationService.verifyTwoFactorCode(email, code);
+    return { message: 'Success.' };
   }
 
   @Post('signin')

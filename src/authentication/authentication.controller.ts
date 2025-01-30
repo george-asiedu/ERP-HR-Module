@@ -17,7 +17,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { TransformInterceptor } from '../interceptors/transform.interceptor';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { CreateUserDto } from '../users/createUser.dto';
+import { CreateUserDto } from './dto/createUser.dto';
 import { AuthGuard } from '../guards/auth/auth.guard';
 import {
   BadRequestExample,
@@ -25,6 +25,7 @@ import {
   LoginResponseExample, RegularLoginExample, RememberMeLoginExample,
   UserResponseExample,
 } from '../utils/userResponse';
+import { TwoFactorDto } from './dto/twoFactor.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -51,12 +52,12 @@ export class AuthenticationController {
     description: 'Bad Request.',
     example: BadRequestExample,
   })
-  async signup(@Body() user: CreateUserDto): Promise<CreateUserDto & User> {
+  async signup(@Body() user: CreateUserDto): Promise<Partial<CreateUserDto>> {
     return await this.authenticationService.signup(user);
   }
 
   @Post('verify-2fa')
-  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, }))
   @ApiOperation({ summary: 'Verifies the 2FA code sent to the user\'s email.' })
   @ApiResponse({
     status: 200,
@@ -66,14 +67,12 @@ export class AuthenticationController {
     status: 400,
     description: 'Invalid 2FA code or user not found.',
   })
-  async verifyTwoFactorCode(@Body() body: { email: string; code: string }) {
-    const { email, code } = body;
-    await this.authenticationService.verifyTwoFactorCode(email, code);
-    return { message: 'Success.' };
+  async verifyTwoFactorCode(@Body() twoFactorDto: TwoFactorDto) {
+    return await this.authenticationService.verifyTwoFactorCode(twoFactorDto);
   }
 
   @Post('signin')
-  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, }),)
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, }))
   @ApiOperation({ summary: 'Sign in a user into the system.' })
   @ApiBody({
     type: SignInDto,

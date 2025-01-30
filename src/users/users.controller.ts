@@ -5,11 +5,12 @@ import {
   Param,
   ParseIntPipe,
   Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from './users.entity';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { UserRole } from './createUser.dto';
+import { UserRole } from '../authentication/dto/createUser.dto';
 import { Roles } from '../guards/roles/role.decorator';
 import { RequestInterface } from '../guards/auth/auth.guard';
 import {
@@ -63,7 +64,11 @@ export class UsersController extends BaseController {
     example: UserResponseExample
   })
   async getProfile(@Req() req: RequestInterface): Promise<User | null> {
-    return await this.usersService.getUserById(req.user?.id);
+    if (!req.user) {
+      throw new UnauthorizedException('Unauthorized request. No user found in request.');
+    }
+
+    return await this.usersService.getUserProfile(req.user);
   }
 
   @Delete(':id')

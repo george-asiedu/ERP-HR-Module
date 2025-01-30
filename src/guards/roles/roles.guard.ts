@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
-import { UserRole } from '../../users/createUser.dto';
+import { UserRole } from '../../authentication/dto/createUser.dto';
 import { constants } from '../../utils/constants';
 
 @Injectable()

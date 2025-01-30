@@ -7,6 +7,7 @@ import { pgConfig } from './config/dbConfig';
 import { UsersModule } from './users/users.module';
 import { APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { TimeoutInterceptor } from './interceptors/timeout.interceptor';
+import { AuthenticationModule } from './authentication/authentication.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { TimeoutInterceptor } from './interceptors/timeout.interceptor';
       useFactory: (configService: ConfigService) => pgConfig(configService)
     }),
     UsersModule,
+    AuthenticationModule,
   ],
   controllers: [AppController],
   providers: [

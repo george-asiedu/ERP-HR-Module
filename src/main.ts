@@ -7,7 +7,7 @@ import { constants } from './utils/constants';
 import { TimeoutInterceptor } from './interceptors/timeout.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { cors: true});
   app.setGlobalPrefix(constants.globalPrefix);
   app.useGlobalPipes(new ValidationPipe());
   app.useGlobalInterceptors(new TimeoutInterceptor());
@@ -27,7 +27,6 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, options);
   SwaggerModule.setup(constants.swaggerDocsPath, app, document);
 
-  app.enableCors();
   await app.listen(port);
 }
 bootstrap();

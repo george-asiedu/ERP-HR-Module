@@ -33,7 +33,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
           },
         },
         defaults: {
-          from: '"No Reply" <no-reply@asiedug41@gmail.com>',
+          from: `"No Reply" <${configService.get<string>('MAIL_USER')}>`,
         },
       }),
     }),

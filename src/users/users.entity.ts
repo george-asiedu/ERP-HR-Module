@@ -1,14 +1,10 @@
 import {
-  BeforeInsert,
-  BeforeUpdate,
   Column,
   Entity,
   PrimaryGeneratedColumn
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { UserRole } from './createUser.dto';
-
-const BCRYPT_SALT_ROUNDS = 10;
+import { UserRole } from '../authentication/dto/createUser.dto';
 
 @Entity()
 export class User {
@@ -40,16 +36,8 @@ export class User {
   @Column({ default: false })
   isVerified!: boolean;
 
-  @BeforeInsert()
-  @BeforeUpdate()
-  async handlePasswordHashing(): Promise<void> {
-    if (this.password) {
-      this.password = await User.hashPassword(this.password);
-    }
-  }
-
-  private static async hashPassword(password: string): Promise<string> {
-    const salt = await bcrypt.genSalt(BCRYPT_SALT_ROUNDS);
+  public static async hashPassword(password: string): Promise<string> {
+    const salt = await bcrypt.genSalt(10);
     return bcrypt.hash(password, salt);
   }
 }

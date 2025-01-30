@@ -5,8 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { pgConfig } from './config/dbConfig';
 import { UsersModule } from './users/users.module';
-import { APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
-import { TimeoutInterceptor } from './interceptors/timeout.interceptor';
+import { APP_PIPE } from '@nestjs/core';
 import { AuthenticationModule } from './authentication/authentication.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 
@@ -45,10 +44,6 @@ import { MailerModule } from '@nestjs-modules/mailer';
     {
       provide: APP_PIPE,
       useClass: ValidationPipe,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: TimeoutInterceptor,
     },
     AppService,
   ],

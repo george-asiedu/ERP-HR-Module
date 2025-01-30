@@ -33,7 +33,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
           },
         },
         defaults: {
-          from: `"No Reply" <${configService.get<string>('MAIL_USER')}>`,
+          from: `"ERP System 2FA code" <${configService.get<string>('MAIL_USER')}>`,
         },
       }),
     }),

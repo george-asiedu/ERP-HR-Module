@@ -63,6 +63,11 @@ export class UsersController extends BaseController {
     description: 'Success',
     example: UserResponseExample
   })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request.',
+    example: { message: 'User ID not valid' }
+  })
   async getProfile(@Req() req: RequestInterface): Promise<User | null> {
     if (!req.user) {
       throw new UnauthorizedException('Unauthorized request. No user found in request.');

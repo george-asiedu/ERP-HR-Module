@@ -26,6 +26,9 @@ import {
   UserResponseExample,
 } from '../utils/userResponse';
 import { TwoFactorDto } from './dto/twoFactor.dto';
+import { ResetPasswordDto } from './dto/resetPassword.dto';
+import { VerificationCodeDto } from './dto/verificationCode.dto';
+import { ForgotPasswordDto } from './dto/forgotPassword.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -59,6 +62,7 @@ export class AuthenticationController {
   @Post('verify-2fa')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, }))
   @ApiOperation({ summary: 'Verifies the 2FA code sent to the user\'s email.' })
+  @ApiBody({ type: TwoFactorDto, description: 'JSON object to verify a user' })
   @ApiResponse({
     status: 200,
     description: 'Success.',
@@ -91,6 +95,57 @@ export class AuthenticationController {
   })
   async signIn(@Body() signInDto: SignInDto) {
     return this.authenticationService.signIn(signInDto);
+  }
+
+  @Post('forgot-password')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  @ApiOperation({ summary: 'Send a password reset verification code to the user\'s email.' })
+  @ApiBody({ type: ForgotPasswordDto, description: 'JSON structure to to send verification code.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Success',
+    example: { message: 'Success' }
+  })@ApiResponse({
+    status: 400,
+    description: 'Bad Request',
+    example: { message: 'Invalid email.' }
+  })
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authenticationService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Post('verify-reset-code')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  @ApiOperation({ summary: 'Verify the 6-digit reset code before resetting the password.' })
+  @ApiBody({ type: VerificationCodeDto, description: 'JSON structure to to verify reset code.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Success',
+    example: { message: 'Success' }
+  })@ApiResponse({
+    status: 400,
+    description: 'Bad Request',
+    example: { message: 'Invalid reset code.' }
+  })
+  async verifyResetCode(@Body() verificationCodeDto: VerificationCodeDto) {
+    return this.authenticationService.verifyResetCode(verificationCodeDto);
+  }
+
+  @Post('reset-password')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  @ApiOperation({ summary: 'Reset the user\'s password after verification.' })
+  @ApiBody({ type: ResetPasswordDto, description: 'JSON structure to to reset password.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Success',
+    example: { message: 'Success' }
+  })@ApiResponse({
+    status: 400,
+    description: 'Bad Request',
+    example: { message: 'Password does not match.' }
+  })
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authenticationService.resetPassword(resetPasswordDto);
   }
 
   @ApiBearerAuth()

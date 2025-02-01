@@ -9,6 +9,9 @@ import { ConfigService } from '@nestjs/config';
 import { MailerService } from '@nestjs-modules/mailer';
 import { CreateUserDto } from './dto/createUser.dto';
 import { TwoFactorDto } from './dto/twoFactor.dto';
+import { ResetPasswordDto } from './dto/resetPassword.dto';
+import { ForgotPasswordDto } from './dto/forgotPassword.dto';
+import { VerificationCodeDto } from './dto/verificationCode.dto';
 
 export interface SignInResponse {
   accessToken: string;
@@ -123,5 +126,65 @@ export class AuthenticationService {
     await this.usersRepository.save(user);
 
     return { accessToken, refreshToken };
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
+    const user = await this.usersRepository.findOne({ where: { email: forgotPasswordDto.email.toLowerCase() } });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    user.passwordResetCode = resetCode;
+    user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+    await this.usersRepository.save(user);
+
+    await this.mailerService.sendMail({
+      to: user.email,
+      subject: 'Password Reset Code',
+      text: `Your password reset code is: ${resetCode}`,
+    });
+
+    return { message: 'Success' };
+  }
+
+  async verifyResetCode(verificationCode: VerificationCodeDto): Promise<{ message: string }> {
+    const user = await this.usersRepository.findOne({ where: { email: verificationCode.email.toLowerCase() } });
+
+    if (
+      !user || user.passwordResetCode !== verificationCode.verificationCode
+      || !user.passwordResetExpires || new Date() > user.passwordResetExpires
+    ) {
+      throw new BadRequestException('Invalid or expired verification code.');
+    }
+
+    user.passwordResetCode = null;
+    user.passwordResetExpires = null;
+    user.canResetPassword = true;
+
+    await this.usersRepository.save(user);
+
+    return { message: 'Success' };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+    const user = await this.usersRepository.findOne({ where: { email: resetPasswordDto.email.toLowerCase() } });
+
+    if (!user || !user.canResetPassword) {
+      throw new BadRequestException('Password reset not allowed. Verify your reset code first.');
+    }
+
+    if (resetPasswordDto.newPassword !== resetPasswordDto.confirmNewPassword) {
+      throw new BadRequestException('Passwords do not match.');
+    }
+
+    user.password = await bcrypt.hash(resetPasswordDto.newPassword, 10);
+    user.canResetPassword = false;
+
+    await this.usersRepository.save(user);
+
+    return { message: 'Success.' };
   }
 }

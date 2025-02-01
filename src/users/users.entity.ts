@@ -36,6 +36,15 @@ export class User {
   @Column({ default: false })
   isVerified!: boolean;
 
+  @Column({ type: 'varchar', length: 6, nullable: true })
+  passwordResetCode!: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  passwordResetExpires!: Date | null;
+
+  @Column({ type: 'boolean', default: false })
+  canResetPassword!: boolean;
+
   public static async hashPassword(password: string): Promise<string> {
     const salt = await bcrypt.genSalt(10);
     return bcrypt.hash(password, salt);

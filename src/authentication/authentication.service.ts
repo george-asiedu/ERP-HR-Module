@@ -189,21 +189,32 @@ export class AuthenticationService {
     await this.usersRepository.save(user);
   }
 
-  async resetPassword(resetPasswordDto: ResetPasswordDto) {
-    const user = await this.usersRepository.findOne({ where: { email: resetPasswordDto.email.toLowerCase() } });
+  async resetPassword(resetPasswordDto: ResetPasswordDto, token: string) {
+    try {
+      const jwtSecret = this.configService.get<string>('JWT_SECRET');
+      const payload = this.jwtService.verify(token, { secret: jwtSecret });
 
-    if (!user || !user.canResetPassword) {
-      throw new BadRequestException('Password reset not allowed. Verify your reset code first.');
+      const user = await this.usersRepository.findOne({
+        where: { email: payload.email.toLowerCase() },
+      });
+
+      if (!user || !user.canResetPassword) {
+        throw new BadRequestException('Password reset not allowed. Verify your reset code first.');
+      }
+      if (resetPasswordDto.newPassword !== resetPasswordDto.confirmNewPassword) {
+        throw new BadRequestException('Passwords do not match.');
+      }
+
+      user.password = await bcrypt.hash(resetPasswordDto.newPassword, 10);
+      user.canResetPassword = false;
+
+      await this.usersRepository.save(user);
+    } catch (error) {
+      if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+        throw new BadRequestException('Invalid or expired token');
+      }
+      throw new BadRequestException('Error resetting password');
     }
-
-    if (resetPasswordDto.newPassword !== resetPasswordDto.confirmNewPassword) {
-      throw new BadRequestException('Passwords do not match.');
-    }
-
-    user.password = await bcrypt.hash(resetPasswordDto.newPassword, 10);
-    user.canResetPassword = false;
-
-    await this.usersRepository.save(user);
   }
 
   async refreshToken(refreshToken: RefreshTokenDto) {

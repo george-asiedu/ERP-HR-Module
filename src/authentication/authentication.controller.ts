@@ -2,21 +2,15 @@ import {
   Controller,
   Post,
   Body,
-  BadRequestException,
   UseInterceptors,
   UsePipes,
   ValidationPipe,
-  UseGuards
+  UseGuards, Query,
 } from '@nestjs/common';
 import { AuthenticationService } from './authentication.service';
 import { SignInDto } from './dto/signIn.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { User } from '../users/users.entity';
-import { Repository } from 'typeorm';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { TransformInterceptor } from '../interceptors/transform.interceptor';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateUserDto } from './dto/createUser.dto';
 import { AuthGuard } from '../guards/auth/auth.guard';
 import {
@@ -29,17 +23,13 @@ import { TwoFactorDto } from './dto/twoFactor.dto';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { VerificationCodeDto } from './dto/verificationCode.dto';
 import { ForgotPasswordDto } from './dto/forgotPassword.dto';
+import { RefreshTokenDto } from './dto/refreshToken.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
 @UseInterceptors(TransformInterceptor)
 export class AuthenticationController {
-  constructor(
-    private authenticationService: AuthenticationService,
-    @InjectRepository(User) private usersRepository: Repository<User>,
-    private jwtService: JwtService,
-    private configService: ConfigService
-  ) {}
+  constructor(private authenticationService: AuthenticationService) {}
 
   @Post('signup')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
@@ -61,18 +51,21 @@ export class AuthenticationController {
 
   @Post('verify-2fa')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, }))
-  @ApiOperation({ summary: 'Verifies the 2FA code sent to the user\'s email.' })
-  @ApiBody({ type: TwoFactorDto, description: 'JSON object to verify a user' })
+  @ApiOperation({ summary: 'Verifies the 2FA code sent to the user\'s email using token.' })
+  @ApiParam({ name: 'token', description: 'The token for the user to verify their account.' })
+  @ApiBody({ type: TwoFactorDto, description: '2FA code to verify a user\'s account' })
   @ApiResponse({
     status: 200,
     description: 'Success.',
+    example: { message: 'Success' }
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid 2FA code or user not found.',
+    description: 'Bad Request.',
+    example: { message: 'Invalid 2FA code or user not found.' }
   })
-  async verifyTwoFactorCode(@Body() twoFactorDto: TwoFactorDto) {
-    return await this.authenticationService.verifyTwoFactorCode(twoFactorDto);
+  async verifyTwoFactorCode(@Query('token') token: string, @Body() twoFactorDto: TwoFactorDto) {
+    return await this.authenticationService.verifyTwoFactorCode(twoFactorDto, token);
   }
 
   @Post('signin')
@@ -84,7 +77,7 @@ export class AuthenticationController {
     examples: {regularLogin: RegularLoginExample, rememberMeLogin: RememberMeLoginExample},
   })
   @ApiResponse({
-    status: 201,
+    status: 200,
     description: 'Success',
     example: LoginResponseExample
   })
@@ -102,7 +95,7 @@ export class AuthenticationController {
   @ApiOperation({ summary: 'Send a password reset verification code to the user\'s email.' })
   @ApiBody({ type: ForgotPasswordDto, description: 'JSON structure to to send verification code.' })
   @ApiResponse({
-    status: 201,
+    status: 200,
     description: 'Success',
     example: { message: 'Success' }
   })@ApiResponse({
@@ -117,9 +110,13 @@ export class AuthenticationController {
   @Post('verify-reset-code')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   @ApiOperation({ summary: 'Verify the 6-digit reset code before resetting the password.' })
-  @ApiBody({ type: VerificationCodeDto, description: 'JSON structure to to verify reset code.' })
+  @ApiParam({ name: 'token', description: 'The token for the user to verify their reset code.' })
+  @ApiBody({
+    type: VerificationCodeDto,
+    description: 'JSON structure to verify the reset code, which includes the verification code.'
+  })
   @ApiResponse({
-    status: 201,
+    status: 200,
     description: 'Success',
     example: { message: 'Success' }
   })@ApiResponse({
@@ -127,8 +124,8 @@ export class AuthenticationController {
     description: 'Bad Request',
     example: { message: 'Invalid reset code.' }
   })
-  async verifyResetCode(@Body() verificationCodeDto: VerificationCodeDto) {
-    return this.authenticationService.verifyResetCode(verificationCodeDto);
+  async verifyResetCode(@Query('token') token: string, @Body() verificationCodeDto: VerificationCodeDto) {
+    return this.authenticationService.verifyResetCode(verificationCodeDto, token);
   }
 
   @Post('reset-password')
@@ -152,60 +149,19 @@ export class AuthenticationController {
   @UseGuards(AuthGuard)
   @Post('refresh-token')
   @UsePipes(new ValidationPipe({ forbidNonWhitelisted: true, }))
-  @ApiOperation({ summary: 'Allow continuous user access in the system.' })
-  @ApiBody({ description: 'Refresh token string' })
+  @ApiOperation({ summary: 'Allow continuous user access in the system using a refresh token.' })
+  @ApiBody({ type: RefreshTokenDto, description: 'Refresh token string' })
   @ApiResponse({
-    status: 201,
+    status: 200,
     description: 'Success',
     example: LoginResponseExample
   })
   @ApiResponse({
     status: 400,
     description: 'Bad Request.',
-    example: ['invalid token'],
+    example: { message: 'Invalid token.' },
   })
-  async refreshToken(@Body('refreshToken') refreshToken: string) {
-    try {
-      const jwtRefreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
-      const payload = this.jwtService.verify(refreshToken, {
-        secret: jwtRefreshSecret,
-      });
-      const user = await this.usersRepository.findOne({
-        where: { id: payload.sub, refreshToken },
-      });
-
-      if (!user) {
-        throw new BadRequestException('Invalid token');
-      }
-
-      const jwtSecret = this.configService.get<string>('JWT_SECRET');
-      const accessExpiration = this.configService.get<string>('JWT_EXPIRY');
-      const refreshExpiration = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN');
-
-      const newAccessToken = this.jwtService.sign(
-        { email: user.email, sub: user.id },
-        {
-          secret: jwtSecret,
-          expiresIn: accessExpiration,
-        },
-      );
-
-      const newRefreshToken = this.jwtService.sign(
-        { email: user.email, sub: user.id },
-        {
-          secret: jwtRefreshSecret,
-          expiresIn: refreshExpiration,
-        },
-      );
-
-      user.refreshToken = newRefreshToken;
-      await this.usersRepository.save(user);
-      return { accessToken: newAccessToken, refreshToken: newRefreshToken }
-    } catch (error) {
-      if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-        throw new BadRequestException('Invalid or expired refresh token');
-      }
-      throw new BadRequestException('Invalid refresh token');
-    }
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authenticationService.refreshToken(refreshTokenDto);
   }
 }

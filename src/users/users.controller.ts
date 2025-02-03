@@ -5,7 +5,6 @@ import {
   Param,
   ParseIntPipe,
   Req,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from './users.entity';
@@ -50,7 +49,7 @@ export class UsersController extends BaseController {
   @ApiResponse({
     status: 400,
     description: 'Bad Request.',
-    example: 'Invalid user ID format.'
+    example: { message: 'Invalid user ID format.' }
   })
   async getUserById(@Param('id', ParseIntPipe) id: number): Promise<User | null> {
     return await this.usersService.getUserById(id);
@@ -69,10 +68,6 @@ export class UsersController extends BaseController {
     example: { message: 'User ID not valid' }
   })
   async getProfile(@Req() req: RequestInterface): Promise<User | null> {
-    if (!req.user) {
-      throw new UnauthorizedException('Unauthorized request. No user found in request.');
-    }
-
     return await this.usersService.getUserProfile(req.user);
   }
 
@@ -80,8 +75,8 @@ export class UsersController extends BaseController {
   @Roles(UserRole.Admin)
   @ApiOperation({ summary: 'Deletes a user by ID' })
   @ApiResponse({ status: 200, description: 'Success' })
-  @ApiResponse({ status: 400, description: 'Bad Request', example: 'Invalid user ID format.' })
-  async deleteUser(@Param('id') id: number): Promise<any> {
+  @ApiResponse({ status: 400, description: 'Bad Request', example: { message: 'Invalid user ID format.' } })
+  async deleteUser(@Param('id') id: number) {
     return this.usersService.deleteUser(id);
   }
 }

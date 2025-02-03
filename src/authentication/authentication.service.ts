@@ -12,6 +12,7 @@ import { TwoFactorDto } from './dto/twoFactor.dto';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { ForgotPasswordDto } from './dto/forgotPassword.dto';
 import { VerificationCodeDto } from './dto/verificationCode.dto';
+import { RefreshTokenDto } from './dto/refreshToken.dto';
 
 export interface SignInResponse {
   accessToken: string;
@@ -27,6 +28,15 @@ export class AuthenticationService {
     private configService: ConfigService,
     private mailerService: MailerService,
   ) {}
+
+  decodeToken(token: string) {
+    const jwtSecret = this.configService.get<string>('JWT_SECRET');
+    try {
+      return this.jwtService.verify(token, { secret: jwtSecret });
+    } catch (error) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+  }
 
   async signup(user: CreateUserDto): Promise<Partial<CreateUserDto>> {
     const existingUser = await this.usersRepository.findOneBy({ email: user.email.toLowerCase() });
@@ -50,7 +60,11 @@ export class AuthenticationService {
       } catch (emailError) {
         throw new BadRequestException(`Error sending email: ${emailError.message}`);
       }
-      const { password, ...userResponse } = newUser;
+      const {
+        password, passwordResetCode, canResetPassword,
+        passwordResetExpires, refreshToken,
+        twoFactorCode: _twoFactorCode, ...userResponse
+      } = newUser;
       return userResponse;
     } catch (error) {
       if (error instanceof QueryFailedError && error.driverError.code === '23505') {
@@ -60,13 +74,16 @@ export class AuthenticationService {
     }
   }
 
-  async verifyTwoFactorCode(body: TwoFactorDto) {
-    const user = await this.usersRepository.findOne({ where: { email: body.email.toLowerCase() } });
+  async verifyTwoFactorCode(body: TwoFactorDto, token: string) {
+    const payload = this.decodeToken(token);
+    if (!payload || !payload.userId) {
+      throw new BadRequestException('Invalid token');
+    }
 
+    const user = await this.usersRepository.findOne({ where: { id: payload.userId } });
     if (!user) {
       throw new BadRequestException('User not found');
     }
-
     if (user.twoFactorCode !== body.twoFactorCode) {
       throw new BadRequestException('Invalid 2FA code');
     }
@@ -110,7 +127,6 @@ export class AuthenticationService {
       name: user.name,
       role: user.role,
       isVerified: user.isVerified,
-      id: user.id,
       sub: user.id
     };
     const accessToken = this.jwtService.sign(payload, {
@@ -128,7 +144,7 @@ export class AuthenticationService {
     return { accessToken, refreshToken };
   }
 
-  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
     const user = await this.usersRepository.findOne({ where: { email: forgotPasswordDto.email.toLowerCase() } });
 
     if (!user) {
@@ -146,12 +162,18 @@ export class AuthenticationService {
       subject: 'Password Reset Code',
       text: `Your password reset code is: ${resetCode}`,
     });
-
-    return { message: 'Success' };
   }
 
-  async verifyResetCode(verificationCode: VerificationCodeDto): Promise<{ message: string }> {
-    const user = await this.usersRepository.findOne({ where: { email: verificationCode.email.toLowerCase() } });
+  async verifyResetCode(verificationCode: VerificationCodeDto, token: string) {
+    const payload = this.decodeToken(token);
+    if (!payload || !payload.userId) {
+      throw new BadRequestException('Invalid token');
+    }
+
+    const user = await this.usersRepository.findOne({ where: { id: payload.userId } });
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
 
     if (
       !user || user.passwordResetCode !== verificationCode.verificationCode
@@ -165,11 +187,9 @@ export class AuthenticationService {
     user.canResetPassword = true;
 
     await this.usersRepository.save(user);
-
-    return { message: 'Success' };
   }
 
-  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const user = await this.usersRepository.findOne({ where: { email: resetPasswordDto.email.toLowerCase() } });
 
     if (!user || !user.canResetPassword) {
@@ -184,7 +204,51 @@ export class AuthenticationService {
     user.canResetPassword = false;
 
     await this.usersRepository.save(user);
+  }
 
-    return { message: 'Success.' };
+  async refreshToken(refreshToken: RefreshTokenDto) {
+    try {
+      const jwtRefreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
+      const payload = this.jwtService.verify(refreshToken.refreshToken, {
+        secret: jwtRefreshSecret,
+      });
+      const user = await this.usersRepository.findOne({
+        where: { id: payload.sub, refreshToken: refreshToken.refreshToken },
+      });
+
+      if (!user) {
+        throw new BadRequestException('Invalid token');
+      }
+
+      const jwtSecret = this.configService.get<string>('JWT_SECRET');
+      const accessExpiration = this.configService.get<string>('JWT_EXPIRY');
+      const refreshExpiration = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN');
+
+      const newAccessToken = this.jwtService.sign(
+        { email: user.email, sub: user.id },
+        {
+          secret: jwtSecret,
+          expiresIn: accessExpiration,
+        },
+      );
+
+      const newRefreshToken = this.jwtService.sign(
+        { email: user.email, sub: user.id },
+        {
+          secret: jwtRefreshSecret,
+          expiresIn: refreshExpiration,
+        },
+      );
+
+      user.refreshToken = newRefreshToken;
+      await this.usersRepository.save(user);
+
+      return { accessToken: newAccessToken, refreshToken: newRefreshToken }
+    } catch (error) {
+      if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+        throw new BadRequestException('Invalid or expired refresh token');
+      }
+      throw new BadRequestException('Invalid refresh token');
+    }
   }
 }

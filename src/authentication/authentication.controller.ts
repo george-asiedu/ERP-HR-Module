@@ -131,6 +131,7 @@ export class AuthenticationController {
   @Post('reset-password')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   @ApiOperation({ summary: 'Reset the user\'s password after verification.' })
+  @ApiParam({ name: 'token', description: 'The token to verify the user' })
   @ApiBody({ type: ResetPasswordDto, description: 'JSON structure to to reset password.' })
   @ApiResponse({
     status: 201,
@@ -141,8 +142,8 @@ export class AuthenticationController {
     description: 'Bad Request',
     example: { message: 'Password does not match.' }
   })
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return this.authenticationService.resetPassword(resetPasswordDto);
+  async resetPassword(@Query('token') token: string, @Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authenticationService.resetPassword(resetPasswordDto, token);
   }
 
   @ApiBearerAuth()

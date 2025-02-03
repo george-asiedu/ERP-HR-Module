@@ -5,7 +5,6 @@ export const UserResponseExample = {
     name: 'George Asiedu',
     email: 'george.asiedu@gmail.com',
     role: 'admin',
-    refreshToken: null,
     isVerified: false
   }
 }

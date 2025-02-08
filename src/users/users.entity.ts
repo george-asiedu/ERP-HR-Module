@@ -45,6 +45,9 @@ export class User {
   @Column({ type: 'boolean', default: false })
   canResetPassword!: boolean;
 
+  @Column({ type: 'varchar', nullable: true })
+  image?: string | null;
+
   public static async hashPassword(password: string): Promise<string> {
     const salt = await bcrypt.genSalt(10);
     return bcrypt.hash(password, salt);

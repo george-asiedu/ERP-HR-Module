@@ -14,6 +14,12 @@ export const LoginResponseExample = {
   data: {
     accessToken: 'accessToken',
     refreshToken: 'refreshToken',
+    user: {
+      email: 'george.asiedu@gmail.com',
+      name: 'George Asiedu',
+      role: 'Admin',
+      isVerified: true
+    }
   }
 }
 

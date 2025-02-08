@@ -49,7 +49,7 @@ export class AuthenticationController {
     return await this.authenticationService.signup(user);
   }
 
-  @Post('verify-2fa')
+  @Post('verify-account')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, }))
   @ApiOperation({ summary: 'Verifies the 2FA code sent to the user\'s email using token.' })
   @ApiParam({ name: 'token', description: 'The token for the user to verify their account.' })

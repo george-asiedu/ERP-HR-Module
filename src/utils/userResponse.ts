@@ -6,7 +6,8 @@ export const UserResponseExample = {
       name: 'George Asiedu',
       email: 'george.asiedu@gmail.com',
       role: 'admin',
-      isVerified: false
+      isVerified: false,
+      image: null
     },
     token: 'block token'
   }
@@ -21,7 +22,8 @@ export const LoginResponseExample = {
       email: 'george.asiedu@gmail.com',
       name: 'George Asiedu',
       role: 'Admin',
-      isVerified: true
+      isVerified: true,
+      image: null
     }
   }
 }

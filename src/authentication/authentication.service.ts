@@ -17,6 +17,12 @@ import { RefreshTokenDto } from './dto/refreshToken.dto';
 export interface SignInResponse {
   accessToken: string;
   refreshToken: string;
+  user: {
+    email: string;
+    name: string;
+    role: string;
+    isVerified: boolean;
+  };
 }
 
 @Injectable()
@@ -141,7 +147,16 @@ export class AuthenticationService {
     user.refreshToken = refreshToken;
     await this.usersRepository.save(user);
 
-    return { accessToken, refreshToken };
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isVerified: user.isVerified
+      }
+    };
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {

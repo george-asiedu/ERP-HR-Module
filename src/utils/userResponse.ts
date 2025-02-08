@@ -1,11 +1,14 @@
 export const UserResponseExample = {
   message: 'Success',
   data: {
-    id: 1,
-    name: 'George Asiedu',
-    email: 'george.asiedu@gmail.com',
-    role: 'admin',
-    isVerified: false
+    user: {
+      id: 1,
+      name: 'George Asiedu',
+      email: 'george.asiedu@gmail.com',
+      role: 'admin',
+      isVerified: false
+    },
+    token: 'block token'
   }
 }
 

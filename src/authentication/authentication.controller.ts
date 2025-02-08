@@ -45,7 +45,7 @@ export class AuthenticationController {
     description: 'Bad Request.',
     example: BadRequestExample,
   })
-  async signup(@Body() user: CreateUserDto): Promise<Partial<CreateUserDto>> {
+  async signup(@Body() user: CreateUserDto) {
     return await this.authenticationService.signup(user);
   }
 

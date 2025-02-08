@@ -25,6 +25,10 @@ export interface SignInResponse {
   };
 }
 
+interface JwtPayload {
+  userId: string;
+}
+
 @Injectable()
 export class AuthenticationService {
   constructor(
@@ -44,7 +48,7 @@ export class AuthenticationService {
     }
   }
 
-  async signup(user: CreateUserDto): Promise<Partial<CreateUserDto>> {
+  async signup(user: CreateUserDto):  Promise<{ user: Partial<CreateUserDto>; token: string }> {
     const existingUser = await this.usersRepository.findOneBy({ email: user.email.toLowerCase() });
     if (existingUser) {
       throw new ConflictException('Email is already in use');
@@ -57,21 +61,28 @@ export class AuthenticationService {
     try {
       await this.usersRepository.save(newUser);
 
+      const blockToken = this.jwtService.sign(
+        { userId: newUser.id },
+        { secret: this.configService.get<string>('JWT_SECRET'), expiresIn: '10m' }
+      );
+
       try {
         await this.mailerService.sendMail({
           to: newUser.email,
           subject: 'Your 2FA Verification Code',
-          text: `Your 2FA code is: ${twoFactorCode}`,
+          text: `Your 2FA code is: ${twoFactorCode}.`,
         });
       } catch (emailError) {
         throw new BadRequestException(`Error sending email: ${emailError.message}`);
       }
+
       const {
         password, passwordResetCode, canResetPassword,
         passwordResetExpires, refreshToken,
         twoFactorCode: _twoFactorCode, ...userResponse
       } = newUser;
-      return userResponse;
+
+      return { user: userResponse, token: blockToken };
     } catch (error) {
       if (error instanceof QueryFailedError && error.driverError.code === '23505') {
         throw new ConflictException('Email is already in use');
@@ -81,12 +92,25 @@ export class AuthenticationService {
   }
 
   async verifyTwoFactorCode(body: TwoFactorDto, token: string) {
-    const payload = this.decodeToken(token);
+    let payload: JwtPayload;
+    try {
+      payload = this.jwtService.verify(token, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+      });
+    } catch (error) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+
     if (!payload || !payload.userId) {
       throw new BadRequestException('Invalid token');
     }
 
-    const user = await this.usersRepository.findOne({ where: { id: payload.userId } });
+    const userId = parseInt(payload.userId, 10);
+    if (isNaN(userId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new BadRequestException('User not found');
     }

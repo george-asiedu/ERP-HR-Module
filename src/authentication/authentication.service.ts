@@ -22,6 +22,7 @@ export interface SignInResponse {
     name: string;
     role: string;
     isVerified: boolean;
+    image?: string | null;
   };
 }
 
@@ -178,7 +179,8 @@ export class AuthenticationService {
         email: user.email,
         name: user.name,
         role: user.role,
-        isVerified: user.isVerified
+        isVerified: user.isVerified,
+        image: user.image,
       }
     };
   }

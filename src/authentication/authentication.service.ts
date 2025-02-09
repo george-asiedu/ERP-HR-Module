@@ -135,7 +135,7 @@ export class AuthenticationService {
 
     const user = await this.usersRepository.findOne({
       where: { email: email.toLowerCase() },
-      select: ['id', 'email', 'password', 'isVerified']
+      select: ['id', 'email', 'password', 'isVerified', 'name', 'role', 'image']
     });
 
     if (!user) {
